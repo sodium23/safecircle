@@ -1,21 +1,23 @@
 # SaferCircle Backend (Railway-ready)
 
-## Why you saw `degraded: true`
-Your backend was using `gemini-1.5-flash`, and Gemini API now reports that model as unavailable for your endpoint/version.
+## Why you saw this error
+Browser error showed:
+- request to `/pause`
+- CORS blocked
+- `503 Service Unavailable`
 
-This backend now:
-- defaults to `GEMINI_MODEL=gemini-2.5-flash`
-- retries with fallback models if configured/default model is not found
-- returns `degraded: true` with a safe reply only if all model attempts fail
+That usually means Railway returned an error page before your app response reached the browser.
+This backend now always sends CORS headers and supports both `/api/chat` and `/pause`.
 
-## CORS behavior
-- Always attaches CORS headers.
-- Preflight `OPTIONS` returns `204`.
+## CORS behavior now
+- CORS headers are always attached.
+- Preflight `OPTIONS` always returns `204`.
 - `CORS_ORIGIN` supports comma-separated origins.
+- If a request origin is not in list, backend falls back to the first configured origin.
 
 ## Required env vars
 - `GEMINI_API_KEY` (required)
-- `GEMINI_MODEL` (optional, default `gemini-2.5-flash`)
+- `GEMINI_MODEL` (optional, default `gemini-1.5-flash`)
 - `PORT` (Railway sets automatically)
 - `CORS_ORIGIN` (example: `https://safecircle1.vercel.app`)
 
@@ -23,7 +25,7 @@ This backend now:
 ```env
 PORT=10000
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-1.5-flash
 CORS_ORIGIN=https://safecircle1.vercel.app
 ```
 
@@ -33,13 +35,10 @@ CORS_ORIGIN=https://safecircle1.vercel.app
 - `POST /api/chat` (preferred)
 - `POST /pause` (legacy alias)
 
-## Success and degraded response shape
-Success:
-```json
-{ "reply": "...", "degraded": false, "model": "gemini-2.5-flash" }
-```
+## Degraded mode
+If Gemini is temporarily unavailable, API returns HTTP 200 with:
+- `degraded: true`
+- `reply` fallback safety guidance
+- `error` with upstream issue
 
-Degraded:
-```json
-{ "reply": "...fallback...", "degraded": true, "error": "...", "triedModels": ["..."] }
-```
+This prevents frontend hard failures during transient provider outages.
