@@ -48,3 +48,22 @@ What it does:
 - keeps **current branch** version for all conflicted files (`--ours`)
 - stages everything
 - creates a resolution commit
+
+
+## How to override conflicts quickly
+If merge conflicts are too complex, force one side:
+
+Keep your current branch version (**ours**):
+```bash
+bash scripts/override_conflicts.sh ours
+```
+
+Keep incoming branch version (**theirs**):
+```bash
+bash scripts/override_conflicts.sh theirs
+```
+
+Manual one-liner alternative:
+```bash
+git checkout --ours . && git add -A && git commit -m "Resolve conflicts (ours)"
+```
