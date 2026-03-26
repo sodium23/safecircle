@@ -1,9 +1,40 @@
-# SaferCircle (Render-ready backend + mobile-friendly API)
+# SaferCircle Backend (Railway-ready)
 
-## What this includes
-- Express backend for Render deployment.
-- `POST /api/chat` endpoint for web/mobile clients.
-- Static frontend served from the same app.
+## Backend only
+This service is API-only. Frontend should call this backend over HTTPS.
+
+## Why you saw the CORS error
+Your frontend called:
+- `POST /pause`
+
+But the canonical endpoint is:
+- `POST /api/chat`
+
+This backend now supports **both** `/api/chat` and `/pause` so older frontend code still works.
+
+## Where to add your Gemini key
+Use environment variables (never hardcode in frontend code):
+
+- Local development: set `GEMINI_API_KEY` in `.env` (copy from `.env.example`).
+- Railway: add `GEMINI_API_KEY` in **Project → Service → Variables**.
+
+## CORS setup (fix for Vercel frontend)
+Set `CORS_ORIGIN` to your Vercel URL(s), comma-separated if multiple:
+
+```env
+CORS_ORIGIN=https://safecircle1.vercel.app,https://www.yourdomain.com
+```
+
+Notes:
+- Do **not** include path values (only origin).
+- Trailing slash is accepted and normalized.
+- `CORS_ORIGIN=*` allows all origins (not recommended for production).
+
+## Required environment variables
+- `GEMINI_API_KEY` (required)
+- `GEMINI_MODEL` (optional, default: `gemini-1.5-flash`)
+- `PORT` (Railway injects this automatically)
+- `CORS_ORIGIN` (set to your frontend domain in production)
 
 ## Local run
 ```bash
@@ -12,32 +43,20 @@ cp .env.example .env
 npm start
 ```
 
-Backend URL: `http://localhost:10000`
-
 ## API
-### `POST /api/chat`
-Request body:
+### `POST /api/chat` (preferred)
+Request:
 ```json
-{
-  "message": "Someone is following me near my apartment."
-}
+{ "message": "Someone is following me near my apartment." }
 ```
 
-Response body:
+Response:
 ```json
-{
-  "reply": "...AI safety guidance..."
-}
+{ "reply": "...AI safety guidance..." }
 ```
 
-## Render deploy
-1. Push repo to GitHub.
-2. Create a new Render Web Service.
-3. Render can read `render.yaml` automatically.
-4. Set `GEMINI_API_KEY` in Render environment variables.
-5. Deploy.
+### `POST /pause` (legacy alias)
+Same request/response as `/api/chat`.
 
-## Mobile app compatibility notes
-- Endpoint is plain JSON over HTTPS, suitable for React Native / Flutter / Swift / Kotlin.
-- CORS is configurable with `CORS_ORIGIN`.
-- Client can point to Render URL using the optional backend URL field.
+### `GET /health`
+Returns service health.

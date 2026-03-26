@@ -1,4 +1,3 @@
-const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -10,13 +9,37 @@ const PORT = process.env.PORT || 10000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
 
-app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : "*",
-  })
-);
+function normalizeOrigin(value) {
+  return value.trim().replace(/\/$/, "");
+}
+
+const rawCorsOrigin = process.env.CORS_ORIGIN || "*";
+const allowedOrigins = rawCorsOrigin
+  .split(",")
+  .map(normalizeOrigin)
+  .filter(Boolean);
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes("*")) {
+      return callback(null, true);
+    }
+
+    const normalizedOrigin = normalizeOrigin(origin);
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("Origin not allowed by CORS"));
+  },
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json({ limit: "1mb" }));
-app.use(express.static(path.join(__dirname)));
 
 const systemPrompt = `You are a tough older sister safety coach.
 Rules:
@@ -25,11 +48,15 @@ Rules:
 - Explain likely consequences for each option.
 - Keep it concise and focused on personal safety.`;
 
+app.get("/", (_req, res) => {
+  res.json({ service: "safecircle-backend", status: "ok" });
+});
+
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "safecircle-backend", model: GEMINI_MODEL });
 });
 
-app.post("/api/chat", async (req, res) => {
+async function handleChat(req, res) {
   try {
     if (!GEMINI_API_KEY) {
       return res.status(500).json({ error: "Server is missing GEMINI_API_KEY." });
@@ -70,10 +97,16 @@ app.post("/api/chat", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ error: error.message || "Unexpected server error." });
   }
-});
+}
 
-app.get("*", (_req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+app.post("/api/chat", handleChat);
+app.post("/pause", handleChat);
+
+app.use((error, _req, res, next) => {
+  if (error?.message === "Origin not allowed by CORS") {
+    return res.status(403).json({ error: error.message });
+  }
+  return next(error);
 });
 
 app.listen(PORT, () => {
