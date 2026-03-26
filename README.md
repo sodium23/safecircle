@@ -35,3 +35,16 @@ Enabled for:
 Start command is also provided in:
 - `Procfile`
 - `nixpacks.toml`
+
+
+## Conflict too complex? (quick fix)
+If Git says conflict resolution is too complex and you want to keep this backend-only FastAPI version:
+
+```bash
+bash scripts/resolve_conflicts_backend_only.sh
+```
+
+What it does:
+- keeps **current branch** version for all conflicted files (`--ours`)
+- stages everything
+- creates a resolution commit
