@@ -1,28 +1,9 @@
-# SaferCircle Backend (Railway-ready)
+# SaferCircle (Render-ready backend + mobile-friendly API)
 
-## Backend only
-This service is API-only. Frontend should call this backend over HTTPS.
-
-## Where to add your Gemini key
-Use environment variables (never hardcode in frontend code):
-
-- Local development: set `GEMINI_API_KEY` in `.env` (copy from `.env.example`).
-- Railway: add `GEMINI_API_KEY` in **Project → Service → Variables**.
-
-## CORS setup (fix for Vercel frontend)
-Set `CORS_ORIGIN` to your Vercel URL(s), comma-separated if multiple:
-
-```env
-CORS_ORIGIN=https://your-app.vercel.app,https://www.yourdomain.com
-```
-
-If you set `CORS_ORIGIN=*`, all origins are allowed (not recommended for production).
-
-## Required environment variables
-- `GEMINI_API_KEY` (required)
-- `GEMINI_MODEL` (optional, default: `gemini-1.5-flash`)
-- `PORT` (Railway injects this automatically)
-- `CORS_ORIGIN` (set to your frontend domain in production)
+## What this includes
+- Express backend for Render deployment.
+- `POST /api/chat` endpoint for web/mobile clients.
+- Static frontend served from the same app.
 
 ## Local run
 ```bash
@@ -31,27 +12,32 @@ cp .env.example .env
 npm start
 ```
 
+Backend URL: `http://localhost:10000`
+
 ## API
 ### `POST /api/chat`
-Request:
+Request body:
 ```json
-{ "message": "Someone is following me near my apartment." }
+{
+  "message": "Someone is following me near my apartment."
+}
 ```
 
-Response:
+Response body:
 ```json
-{ "reply": "...AI safety guidance..." }
+{
+  "reply": "...AI safety guidance..."
+}
 ```
 
-### `GET /health`
-Returns service health.
+## Render deploy
+1. Push repo to GitHub.
+2. Create a new Render Web Service.
+3. Render can read `render.yaml` automatically.
+4. Set `GEMINI_API_KEY` in Render environment variables.
+5. Deploy.
 
-## Deploy on Railway
-1. Push this repo to GitHub.
-2. In Railway, create a new project from your GitHub repo.
-3. Railway auto-detects Node and runs `npm start`.
-4. Open **Variables** and set:
-   - `GEMINI_API_KEY=your_real_key`
-   - `CORS_ORIGIN=https://your-app.vercel.app`
-   - optional `GEMINI_MODEL=gemini-1.5-flash`
-5. Redeploy service.
+## Mobile app compatibility notes
+- Endpoint is plain JSON over HTTPS, suitable for React Native / Flutter / Swift / Kotlin.
+- CORS is configurable with `CORS_ORIGIN`.
+- Client can point to Render URL using the optional backend URL field.

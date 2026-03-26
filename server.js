@@ -1,3 +1,4 @@
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -9,27 +10,13 @@ const PORT = process.env.PORT || 10000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
 
-const rawCorsOrigin = process.env.CORS_ORIGIN || "*";
-const allowedOrigins = rawCorsOrigin
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-
-const corsOptions = {
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error("Origin not allowed by CORS"));
-  },
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  optionsSuccessStatus: 204,
-};
-
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : "*",
+  })
+);
 app.use(express.json({ limit: "1mb" }));
+app.use(express.static(path.join(__dirname)));
 
 const systemPrompt = `You are a tough older sister safety coach.
 Rules:
@@ -37,10 +24,6 @@ Rules:
 - Give 2-3 practical options.
 - Explain likely consequences for each option.
 - Keep it concise and focused on personal safety.`;
-
-app.get("/", (_req, res) => {
-  res.json({ service: "safecircle-backend", status: "ok" });
-});
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "safecircle-backend", model: GEMINI_MODEL });
@@ -89,11 +72,8 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-app.use((error, _req, res, next) => {
-  if (error?.message === "Origin not allowed by CORS") {
-    return res.status(403).json({ error: error.message });
-  }
-  return next(error);
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 app.listen(PORT, () => {
