@@ -59,11 +59,13 @@ class PauseRequest(BaseModel):
 # ---------------------------
 
 @app.get("/")
-@app.get("/")
 def root():
     return {"status": "ok", "service": "safecircle-backend"}
 
 
+@app.get("/ping")
+def ping():
+    return {"ping": "pong"}
 
 @app.get("/health")
 def health():
