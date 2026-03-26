@@ -6,6 +6,17 @@ const apiBaseInput = document.getElementById("apiBaseUrl");
 const chatResponse = document.getElementById("chatResponse");
 const optionsContainer = document.getElementById("options");
 const scenarioAnswer = document.getElementById("scenarioAnswer");
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://safecircle1.vercel.app"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 const scenario = {
   text: "You’re at a party. A guy keeps isolating your friend and blocking her from leaving the room.",
