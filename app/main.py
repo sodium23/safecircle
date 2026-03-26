@@ -59,26 +59,10 @@ class PauseRequest(BaseModel):
 # ---------------------------
 
 @app.get("/")
-def root(request: Request):
-    accept = (request.headers.get("accept") or "").lower()
+@app.get("/")
+def root():
+    return {"status": "ok", "service": "safecircle-backend"}
 
-    if "text/html" in accept:
-        return HTMLResponse(
-            """
-            <html>
-              <head><title>SaferCircle Backend</title></head>
-              <body>
-                <h1>SaferCircle Backend is running</h1>
-                <ul>
-                  <li><a href="/health">/health</a></li>
-                  <li><a href="/scenario/today">/scenario/today</a></li>
-                </ul>
-              </body>
-            </html>
-            """
-        )
-
-    return {"service": "safecircle-backend", "status": "ok"}
 
 
 @app.get("/health")
