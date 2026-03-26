@@ -20,14 +20,16 @@
 
       <section id="chat-screen" class="screen active" aria-label="Chat screen">
         <div class="card api-card">
-          <label for="apiKey">Gemini API Key</label>
+          <label for="apiBaseUrl">Backend API URL (optional)</label>
           <input
-            id="apiKey"
-            type="password"
-            placeholder="Paste your Gemini API key"
+            id="apiBaseUrl"
+            type="text"
+            placeholder="https://your-render-service.onrender.com"
             autocomplete="off"
           />
-          <small>Runs directly in your browser. Never hardcode real keys in production.</small>
+          <small>
+            Leave blank to use same-origin. This supports mobile apps by letting you point to any hosted API.
+          </small>
         </div>
 
         <div class="card chat-card">
