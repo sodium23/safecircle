@@ -67,3 +67,11 @@ Manual one-liner alternative:
 ```bash
 git checkout --ours . && git add -A && git commit -m "Resolve conflicts (ours)"
 ```
+
+
+## Build-failed fix (Railway)
+This repo now includes **both**:
+- `nixpacks.toml` with explicit Python-only phases
+- `railway.json` with explicit FastAPI start command
+
+So Railway won't try Node/npm build steps.
