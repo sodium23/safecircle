@@ -1,62 +1,44 @@
 # SaferCircle Backend (Railway-ready)
 
-## Backend only
-This service is API-only. Frontend should call this backend over HTTPS.
+## Why you saw this error
+Browser error showed:
+- request to `/pause`
+- CORS blocked
+- `503 Service Unavailable`
 
-## Why you saw the CORS error
-Your frontend called:
-- `POST /pause`
+That usually means Railway returned an error page before your app response reached the browser.
+This backend now always sends CORS headers and supports both `/api/chat` and `/pause`.
 
-But the canonical endpoint is:
-- `POST /api/chat`
+## CORS behavior now
+- CORS headers are always attached.
+- Preflight `OPTIONS` always returns `204`.
+- `CORS_ORIGIN` supports comma-separated origins.
+- If a request origin is not in list, backend falls back to the first configured origin.
 
-This backend now supports **both** `/api/chat` and `/pause` so older frontend code still works.
-
-## Where to add your Gemini key
-Use environment variables (never hardcode in frontend code):
-
-- Local development: set `GEMINI_API_KEY` in `.env` (copy from `.env.example`).
-- Railway: add `GEMINI_API_KEY` in **Project → Service → Variables**.
-
-## CORS setup (fix for Vercel frontend)
-Set `CORS_ORIGIN` to your Vercel URL(s), comma-separated if multiple:
-
-```env
-CORS_ORIGIN=https://safecircle1.vercel.app,https://www.yourdomain.com
-```
-
-Notes:
-- Do **not** include path values (only origin).
-- Trailing slash is accepted and normalized.
-- `CORS_ORIGIN=*` allows all origins (not recommended for production).
-
-## Required environment variables
+## Required env vars
 - `GEMINI_API_KEY` (required)
-- `GEMINI_MODEL` (optional, default: `gemini-1.5-flash`)
-- `PORT` (Railway injects this automatically)
-- `CORS_ORIGIN` (set to your frontend domain in production)
+- `GEMINI_MODEL` (optional, default `gemini-1.5-flash`)
+- `PORT` (Railway sets automatically)
+- `CORS_ORIGIN` (example: `https://safecircle1.vercel.app`)
 
-## Local run
-```bash
-npm install
-cp .env.example .env
-npm start
+## `.env` example
+```env
+PORT=10000
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-1.5-flash
+CORS_ORIGIN=https://safecircle1.vercel.app
 ```
 
-## API
-### `POST /api/chat` (preferred)
-Request:
-```json
-{ "message": "Someone is following me near my apartment." }
-```
+## Endpoints
+- `GET /`
+- `GET /health`
+- `POST /api/chat` (preferred)
+- `POST /pause` (legacy alias)
 
-Response:
-```json
-{ "reply": "...AI safety guidance..." }
-```
+## Degraded mode
+If Gemini is temporarily unavailable, API returns HTTP 200 with:
+- `degraded: true`
+- `reply` fallback safety guidance
+- `error` with upstream issue
 
-### `POST /pause` (legacy alias)
-Same request/response as `/api/chat`.
-
-### `GET /health`
-Returns service health.
+This prevents frontend hard failures during transient provider outages.
