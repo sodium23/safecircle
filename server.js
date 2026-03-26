@@ -6,7 +6,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 10000;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 function normalizeOrigin(value) {
   return value.trim().replace(/\/$/, "");
@@ -61,6 +61,76 @@ Rules:
 const fallbackReply =
   "I can’t reach live AI right now. Stay in public, call someone you trust, and move to a staffed location immediately.";
 
+const staticModelCandidates = [
+  GEMINI_MODEL,
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-flash-latest",
+].filter((model, index, arr) => model && arr.indexOf(model) === index);
+
+function isModelNotFoundError(data) {
+  const message = data?.error?.message || "";
+  return message.includes("is not found") || message.includes("not supported for generateContent");
+}
+
+async function callGeminiWithModel(message, modelName) {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+  const payload = {
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: `${systemPrompt}\n\nUser situation: ${message.trim()}` }],
+      },
+    ],
+  };
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  return { response, data, modelName };
+}
+
+let discoveredModelsCache = null;
+let discoveredModelsCacheAt = 0;
+const DISCOVERY_TTL_MS = 10 * 60 * 1000;
+
+async function discoverGenerateContentModels() {
+  const now = Date.now();
+  if (discoveredModelsCache && now - discoveredModelsCacheAt < DISCOVERY_TTL_MS) {
+    return discoveredModelsCache;
+  }
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`;
+  const response = await fetch(endpoint);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const models = (data?.models || [])
+    .filter((model) => (model?.supportedGenerationMethods || []).includes("generateContent"))
+    .map((model) => (model.name || "").replace(/^models\//, ""))
+    .filter(Boolean);
+
+  discoveredModelsCache = models;
+  discoveredModelsCacheAt = now;
+  return models;
+}
+
+async function buildModelCandidates() {
+  const discovered = await discoverGenerateContentModels().catch(() => []);
+  const discoveredFlash = discovered.filter((model) => model.includes("flash"));
+
+  return [...staticModelCandidates, ...discoveredFlash, ...discovered].filter(
+    (model, index, arr) => model && arr.indexOf(model) === index
+  );
+}
+
 app.get("/", (_req, res) => {
   res.json({ service: "safecircle-backend", status: "ok" });
 });
@@ -80,36 +150,31 @@ async function handleChat(req, res) {
       return res.status(400).json({ error: "Request body must include a non-empty 'message' string." });
     }
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-    const payload = {
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: `${systemPrompt}\n\nUser situation: ${message.trim()}` }],
-        },
-      ],
-    };
+    const modelCandidates = await buildModelCandidates();
+    let lastFailure = null;
 
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    for (const modelName of modelCandidates) {
+      const { response, data } = await callGeminiWithModel(message, modelName);
 
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      return res.status(200).json({
-        reply: fallbackReply,
-        degraded: true,
-        error: data?.error?.message || "Gemini request failed.",
-      });
+      if (response.ok) {
+        const text =
+          data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+          "No response text returned. Try again.";
+        return res.json({ reply: text, degraded: false, model: modelName });
+      }
+
+      lastFailure = { data, modelName };
+      if (!isModelNotFoundError(data)) {
+        break;
+      }
     }
 
-    const text =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response text returned. Try again.";
-
-    return res.json({ reply: text, degraded: false });
+    return res.status(200).json({
+      reply: fallbackReply,
+      degraded: true,
+      error: lastFailure?.data?.error?.message || "Gemini request failed.",
+      triedModels: modelCandidates,
+    });
   } catch (error) {
     return res.status(200).json({ reply: fallbackReply, degraded: true, error: error.message });
   }
