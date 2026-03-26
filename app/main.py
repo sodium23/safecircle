@@ -21,16 +21,11 @@ app.add_middleware(
 )
 
 
-@app.get("/")
-def root() -> dict[str, str]:
-    return {"service": "safecircle-backend", "status": "ok"}
-
-
 @app.get("/health")
-def health() -> dict[str, str]:
+def health():
     return {"status": "ok"}
 
 
 @app.get("/scenario/today")
-def scenario_today() -> dict:
+def scenario_today():
     return get_today_scenario()

@@ -1,24 +1,24 @@
 # SaferCircle FastAPI Backend
 
-A clean, backend-only FastAPI service.
+## Build fix (once and for all)
+Build now uses a **Dockerfile** so Railway will not run npm or mixed-language autodetection.
 
-## What works
-- `GET /` → basic service status
-- `GET /health` → healthcheck
-- `GET /scenario/today` → rotating scenario of the day
-
-## Local run (verified)
+## Local run
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload
 ```
 
-## Docker deploy (Railway)
-This repo deploys using `Dockerfile` + `railway.json`.
-No npm/node steps are required.
+## Deploy
+Railway is configured to use Dockerfile via `railway.json`.
 
-## Notes
-- Scenario rotation uses: `date.today().day % len(SCENARIOS)`
-- CORS is enabled for localhost frontend ports 3000/5173/8080.
+## Endpoints
+- `GET /health`
+- `GET /scenario/today`
+
+## Conflict helpers
+- `bash scripts/override_conflicts.sh ours`
+- `bash scripts/override_conflicts.sh theirs`
+- `bash scripts/resolve_conflicts_backend_only.sh`
