@@ -1,6 +1,10 @@
 # SaferCircle FastAPI Backend
 
-This repository now runs as a **single FastAPI backend** to avoid mixed Node/Python build issues.
+This repo is backend-only and deploys with Python/FastAPI.
+
+## Why build was failing
+Railway/Nixpacks was auto-running `npm install` because JavaScript frontend files were present.
+This repo now forces Python-only build via `nixpacks.toml`.
 
 ## Run locally
 ```bash
@@ -27,6 +31,39 @@ Enabled for:
 - `http://127.0.0.1:5173`
 - `http://127.0.0.1:8080`
 
-## Railway deploy
-Railway start command is defined in `Procfile`:
-- `uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}`
+## Railway start
+Start command is also provided in:
+- `Procfile`
+- `nixpacks.toml`
+
+
+## Conflict too complex? (quick fix)
+If Git says conflict resolution is too complex and you want to keep this backend-only FastAPI version:
+
+```bash
+bash scripts/resolve_conflicts_backend_only.sh
+```
+
+What it does:
+- keeps **current branch** version for all conflicted files (`--ours`)
+- stages everything
+- creates a resolution commit
+
+
+## How to override conflicts quickly
+If merge conflicts are too complex, force one side:
+
+Keep your current branch version (**ours**):
+```bash
+bash scripts/override_conflicts.sh ours
+```
+
+Keep incoming branch version (**theirs**):
+```bash
+bash scripts/override_conflicts.sh theirs
+```
+
+Manual one-liner alternative:
+```bash
+git checkout --ours . && git add -A && git commit -m "Resolve conflicts (ours)"
+```
