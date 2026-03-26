@@ -2,7 +2,7 @@ const tabButtons = document.querySelectorAll(".tab-btn");
 const screens = document.querySelectorAll(".screen");
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
-const apiKeyInput = document.getElementById("apiKey");
+const apiBaseInput = document.getElementById("apiBaseUrl");
 const chatResponse = document.getElementById("chatResponse");
 const optionsContainer = document.getElementById("options");
 const scenarioAnswer = document.getElementById("scenarioAnswer");
@@ -38,58 +38,33 @@ function switchScreen(screenId) {
   });
 }
 
-async function callGeminiAPI(userMessage, apiKey) {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+function getApiBase() {
+  return apiBaseInput.value.trim().replace(/\/$/, "");
+}
 
-  const sisterTonePrompt = `You are a tough older sister safety coach.
-Rules:
-- Be direct, strategic, and no sugarcoating.
-- Give 2-3 practical options.
-- Explain likely consequences for each option.
-- Keep it concise and focused on personal safety.
-
-User situation: ${userMessage}`;
-
-  const payload = {
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: sisterTonePrompt }],
-      },
-    ],
-  };
+async function getSafetyGuidance(userMessage) {
+  const apiBase = getApiBase();
+  const endpoint = `${apiBase}/api/chat`;
 
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ message: userMessage }),
   });
 
+  const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const message = errorData?.error?.message || "Gemini request failed.";
-    throw new Error(message);
+    throw new Error(data?.error || "Backend request failed.");
   }
 
-  const data = await response.json();
-  return (
-    data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-    "No response text returned. Check your API key and try again."
-  );
+  return data?.reply || "No response text returned. Try again.";
 }
 
 async function handleSend() {
   const userMessage = chatInput.value.trim();
-  const apiKey = apiKeyInput.value.trim();
 
   if (!userMessage) {
     chatResponse.textContent = "Type the situation first. I can’t work with silence.";
-    chatResponse.classList.add("error");
-    return;
-  }
-
-  if (!apiKey) {
-    chatResponse.textContent = "Add your Gemini API key first. No key, no strategy.";
     chatResponse.classList.add("error");
     return;
   }
@@ -98,7 +73,7 @@ async function handleSend() {
   chatResponse.classList.remove("error");
 
   try {
-    const aiText = await callGeminiAPI(userMessage, apiKey);
+    const aiText = await getSafetyGuidance(userMessage);
     chatResponse.textContent = aiText;
   } catch (error) {
     chatResponse.textContent = `Problem: ${error.message}`;
