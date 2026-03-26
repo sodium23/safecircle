@@ -1,5 +1,7 @@
 # SaferCircle FastAPI Backend
 
+This repository now runs as a **single FastAPI backend** to avoid mixed Node/Python build issues.
+
 ## Run locally
 ```bash
 python -m venv .venv
@@ -12,22 +14,19 @@ uvicorn app.main:app --reload
 - `GET /health`
 - `GET /scenario/today`
 
-## Scenario endpoint
-`/scenario/today` returns one hardcoded scenario rotated by current day-of-month:
-- index = `today.day % len(SCENARIOS)`
+## Scenario rotation
+`/scenario/today` returns one hardcoded scenario rotated by:
+- `index = today.day % len(SCENARIOS)`
 
-Each scenario includes:
-- `id`
-- `situation`
-- `choices` (A/B/C)
-- `outcomes` (mapped by A/B/C)
-- `power_move`
-
-## CORS
-CORS is enabled for localhost frontend origins:
+## CORS (localhost frontend)
+Enabled for:
 - `http://localhost:3000`
 - `http://localhost:5173`
 - `http://localhost:8080`
 - `http://127.0.0.1:3000`
 - `http://127.0.0.1:5173`
 - `http://127.0.0.1:8080`
+
+## Railway deploy
+Railway start command is defined in `Procfile`:
+- `uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}`
